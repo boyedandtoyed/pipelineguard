@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "pipelineguard"
+version = "0.1.0"
+description = "ML pipeline validation and drift detection library"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=2.0.0",
+    "pandas>=2.2.0",
+    "scipy>=1.14.0",
+    "scikit-learn>=1.5.0",
+    "rich>=13.9.0",
+    "typer>=0.13.0",
+    "pydantic>=2.9.0",
+]
+
+[project.scripts]
+pipelineguard = "pipelineguard.cli:app"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
