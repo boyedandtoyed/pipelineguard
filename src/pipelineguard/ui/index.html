@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>PipelineGuard</title>
+<style>
+  :root {
+    --bg: #0a0f1a;
+    --bg-elev: #121a2b;
+    --bg-elev-2: #1a2438;
+    --border: #243049;
+    --text: #e6edf7;
+    --text-dim: #8a98b5;
+    --green: #36b37e;
+    --blue: #4B9CD3;
+    --red: #e25c5c;
+    --amber: #e2a23c;
+    --purple: #9b7ede;
+    --mono: "SF Mono", "JetBrains Mono", "Fira Code", "Cascadia Code", Consolas, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: var(--bg-elev);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .logo {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--green);
+    font-family: var(--mono);
+  }
+  .tagline { color: var(--text-dim); font-size: 14px; }
+  .spacer { flex: 1; }
+  .pill {
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--bg-elev-2);
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-dim); }
+  .pill.ok { color: var(--green); border-color: rgba(54,179,126,0.4); }
+  .pill.ok .dot { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .pill.bad { color: var(--red); border-color: rgba(226,92,92,0.4); }
+  .pill.bad .dot { background: var(--red); }
+  main { max-width: 1100px; margin: 0 auto; padding: 32px; }
+
+  .tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 28px;
+  }
+  .tab {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    padding: 12px 22px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--green); border-bottom-color: var(--green); }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .card {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 22px;
+    margin-bottom: 20px;
+  }
+  .card h3 {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--text-dim);
+    margin-bottom: 16px;
+    font-weight: 600;
+  }
+
+  .dropzone {
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    padding: 30px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    color: var(--text-dim);
+  }
+  .dropzone:hover, .dropzone.drag { border-color: var(--blue); background: rgba(75,156,211,0.05); color: var(--text); }
+  .dropzone .filename { color: var(--green); font-family: var(--mono); font-size: 13px; margin-top: 8px; word-break: break-all; }
+
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 13px; color: var(--text-dim); margin-bottom: 6px; }
+  .field input[type=text] {
+    width: 100%;
+    background: var(--bg-elev-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 9px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: var(--mono);
+  }
+  .field input[type=text]:focus { outline: none; border-color: var(--blue); }
+
+  .slider-row { display: flex; align-items: center; gap: 14px; }
+  .slider-row input[type=range] { flex: 1; accent-color: var(--green); }
+  .slider-row .val {
+    font-family: var(--mono);
+    color: var(--green);
+    min-width: 56px;
+    text-align: right;
+    font-size: 14px;
+  }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  .btn {
+    background: var(--green);
+    color: #06120c;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 7px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.05s;
+    width: 100%;
+  }
+  .btn:hover { opacity: 0.9; }
+  .btn:active { transform: translateY(1px); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .banner {
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 18px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 16px;
+  }
+  .banner.pass { background: rgba(54,179,126,0.12); border: 1px solid rgba(54,179,126,0.4); color: var(--green); }
+  .banner.fail { background: rgba(226,92,92,0.12); border: 1px solid rgba(226,92,92,0.4); color: var(--red); }
+
+  .metrics { display: flex; gap: 24px; margin-bottom: 18px; font-family: var(--mono); }
+  .metric { background: var(--bg-elev-2); padding: 12px 18px; border-radius: 7px; border: 1px solid var(--border); }
+  .metric .k { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+  .metric .v { font-size: 20px; color: var(--blue); font-weight: 600; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 11px 12px; border-bottom: 1px solid var(--border); font-size: 14px; }
+  th { color: var(--text-dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+  td.status { font-family: var(--mono); font-weight: 700; }
+  td.status.pass { color: var(--green); }
+  td.status.fail { color: var(--red); }
+
+  .badge {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    text-transform: lowercase;
+    font-weight: 600;
+  }
+  .badge.info { background: rgba(75,156,211,0.15); color: var(--blue); }
+  .badge.warning { background: rgba(226,162,60,0.15); color: var(--amber); }
+  .badge.error { background: rgba(226,92,92,0.15); color: var(--red); }
+  .badge.critical { background: rgba(155,126,222,0.15); color: var(--purple); }
+
+  .drift-list { margin-top: 14px; font-family: var(--mono); font-size: 13px; }
+  .drift-list .item { padding: 7px 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; }
+  .drift-list .item .pval { color: var(--red); }
+
+  .muted { color: var(--text-dim); font-size: 13px; }
+  .hidden { display: none !important; }
+  .error-msg { background: rgba(226,92,92,0.12); border: 1px solid rgba(226,92,92,0.4); color: var(--red); padding: 14px 18px; border-radius: 8px; font-family: var(--mono); font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">PipelineGuard</div>
+  <div class="tagline">ML Pipeline Validation &amp; Drift Detection</div>
+  <div class="spacer"></div>
+  <div class="pill" id="status"><span class="dot"></span><span id="status-text">checking…</span></div>
+</header>
+
+<main>
+  <div class="tabs">
+    <button class="tab active" data-tab="validate">Validate</button>
+    <button class="tab" data-tab="drift">Drift Detection</button>
+  </div>
+
+  <!-- VALIDATE PANEL -->
+  <section class="panel active" id="panel-validate">
+    <div class="card">
+      <h3>Dataset</h3>
+      <div class="field">
+        <div class="dropzone" id="v-drop">
+          <div>Drag &amp; drop a CSV here, or click to browse</div>
+          <div class="filename hidden" id="v-fname"></div>
+          <input type="file" id="v-file" accept=".csv,text/csv" class="hidden" />
+        </div>
+      </div>
+      <div class="field">
+        <label for="v-label">Label column (optional)</label>
+        <input type="text" id="v-label" placeholder="e.g. target" />
+      </div>
+      <div class="field">
+        <label>Missing-value threshold</label>
+        <div class="slider-row">
+          <input type="range" id="v-missing" min="0" max="0.5" step="0.01" value="0.1" />
+          <span class="val" id="v-missing-val">0.10</span>
+        </div>
+      </div>
+      <button class="btn" id="v-run">Run Validation</button>
+    </div>
+    <div id="v-result"></div>
+  </section>
+
+  <!-- DRIFT PANEL -->
+  <section class="panel" id="panel-drift">
+    <div class="card">
+      <h3>Reference &amp; Current Datasets</h3>
+      <div class="two-col">
+        <div>
+          <label class="muted" style="display:block;margin-bottom:8px;">Reference (train)</label>
+          <div class="dropzone" id="r-drop">
+            <div>Drop CSV</div>
+            <div class="filename hidden" id="r-fname"></div>
+            <input type="file" id="r-file" accept=".csv,text/csv" class="hidden" />
+          </div>
+        </div>
+        <div>
+          <label class="muted" style="display:block;margin-bottom:8px;">Current (production)</label>
+          <div class="dropzone" id="c-drop">
+            <div>Drop CSV</div>
+            <div class="filename hidden" id="c-fname"></div>
+            <input type="file" id="c-file" accept=".csv,text/csv" class="hidden" />
+          </div>
+        </div>
+      </div>
+      <div class="field" style="margin-top:18px;">
+        <label for="d-label">Label column (optional)</label>
+        <input type="text" id="d-label" placeholder="e.g. target" />
+      </div>
+      <div class="field">
+        <label>Significance level (α)</label>
+        <div class="slider-row">
+          <input type="range" id="d-alpha" min="0.001" max="0.2" step="0.001" value="0.05" />
+          <span class="val" id="d-alpha-val">0.050</span>
+        </div>
+      </div>
+      <button class="btn" id="d-run">Detect Drift</button>
+    </div>
+    <div id="d-result"></div>
+  </section>
+</main>
+
+<script>
+"use strict";
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => document.querySelectorAll(s);
+
+/* ---- health check ---- */
+async function checkHealth() {
+  const pill = $("#status"), txt = $("#status-text");
+  try {
+    const r = await fetch("/health");
+    if (r.ok) { pill.className = "pill ok"; txt.textContent = "online"; }
+    else { pill.className = "pill bad"; txt.textContent = "offline"; }
+  } catch {
+    pill.className = "pill bad"; txt.textContent = "offline";
+  }
+}
+checkHealth();
+
+/* ---- tabs ---- */
+$$(".tab").forEach((t) => {
+  t.addEventListener("click", () => {
+    $$(".tab").forEach((x) => x.classList.remove("active"));
+    $$(".panel").forEach((x) => x.classList.remove("active"));
+    t.classList.add("active");
+    $("#panel-" + t.dataset.tab).classList.add("active");
+  });
+});
+
+/* ---- dropzone wiring ---- */
+function wireDrop(dropId, inputId, fnameId) {
+  const drop = $("#" + dropId), input = $("#" + inputId), fname = $("#" + fnameId);
+  drop.addEventListener("click", () => input.click());
+  input.addEventListener("change", () => {
+    if (input.files.length) { fname.textContent = input.files[0].name; fname.classList.remove("hidden"); }
+  });
+  ["dragenter", "dragover"].forEach((ev) =>
+    drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add("drag"); })
+  );
+  ["dragleave", "drop"].forEach((ev) =>
+    drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove("drag"); })
+  );
+  drop.addEventListener("drop", (e) => {
+    if (e.dataTransfer.files.length) {
+      input.files = e.dataTransfer.files;
+      fname.textContent = e.dataTransfer.files[0].name;
+      fname.classList.remove("hidden");
+    }
+  });
+}
+wireDrop("v-drop", "v-file", "v-fname");
+wireDrop("r-drop", "r-file", "r-fname");
+wireDrop("c-drop", "c-file", "c-fname");
+
+/* ---- sliders ---- */
+$("#v-missing").addEventListener("input", (e) => { $("#v-missing-val").textContent = parseFloat(e.target.value).toFixed(2); });
+$("#d-alpha").addEventListener("input", (e) => { $("#d-alpha-val").textContent = parseFloat(e.target.value).toFixed(3); });
+
+/* ---- render helpers ---- */
+function sevClass(sev) { return "badge " + (sev || "info"); }
+function sevText(s) { return (s || "info"); }
+function renderChecks(container, report) {
+  if (!report.checks || !report.checks.length) {
+    container.innerHTML = '<p class="muted">No checks produced.</p>';
+    return;
+  }
+  let rows = report.checks.map((c) => `
+    <tr>
+      <td class="status ${c.passed ? "pass" : "fail"}">${c.passed ? "✓" : "✗"}</td>
+      <td style="font-family:var(--mono);">${escapeHtml(c.name)}</td>
+      <td><span class="${sevClass(c.severity)}">${escapeHtml(sevText(c.severity))}</span></td>
+      <td>${escapeHtml(c.message || "")}</td>
+    </tr>`).join("");
+  container.innerHTML = `
+    <table>
+      <thead><tr><th></th><th>Check</th><th>Severity</th><th>Message</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
+}
+function renderResult(host, report, opts) {
+  const passed = report.passed;
+  const dsName = report.dataset_name || "";
+  let driftHtml = "";
+  if (opts.drift && report.checks) {
+    report.checks.forEach((c) => {
+      if (c.details && c.details.drifted_columns && Object.keys(c.details.drifted_columns).length) {
+        driftHtml += '<div class="drift-list"><div class="muted" style="margin-bottom:6px;">Drifted columns</div>';
+        for (const [col, p] of Object.entries(c.details.drifted_columns)) {
+          driftHtml += `<div class="item"><span>${escapeHtml(col)}</span><span class="pval">p=${p}</span></div>`;
+        }
+        driftHtml += "</div>";
+      }
+    });
+  }
+  host.innerHTML = `
+    <div class="banner ${passed ? "pass" : "fail"}">${passed ? "✓ PASSED" : "✗ ISSUES FOUND"}</div>
+    <div class="metrics">
+      <div class="metric"><div class="k">Rows</div><div class="v">${report.total_rows ?? 0}</div></div>
+      <div class="metric"><div class="k">Columns</div><div class="v">${report.total_columns ?? 0}</div></div>
+      <div class="metric"><div class="k">Checks</div><div class="v">${(report.checks || []).length}</div></div>
+      <div class="metric"><div class="k">Dataset</div><div class="v" style="font-size:13px;">${escapeHtml(dsName)}</div></div>
+    </div>
+    <div class="card"><h3>Checks</h3><div id="checks-tbl"></div>${driftHtml}</div>`;
+  renderChecks($("#checks-tbl"), report);
+}
+
+/* ---- actions ---- */
+$("#v-run").addEventListener("click", async () => {
+  const host = $("#v-result");
+  const file = $("#v-file").files[0];
+  if (!file) { host.innerHTML = '<p class="error-msg">Please select a CSV file first.</p>'; return; }
+  host.innerHTML = '<p class="muted">Running validation…</p>';
+  const fd = new FormData();
+  fd.append("file", file);
+  const label = $("#v-label").value.trim();
+  if (label) fd.append("label", label);
+  fd.append("missing_threshold", $("#v-missing").value);
+  try {
+    const r = await fetch("/api/validate", { method: "POST", body: fd });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || ("HTTP " + r.status));
+    renderResult(host, data, { drift: false });
+  } catch (e) {
+    host.innerHTML = '<p class="error-msg">' + escapeHtml(e.message) + "</p>";
+  }
+});
+
+$("#d-run").addEventListener("click", async () => {
+  const host = $("#d-result");
+  const ref = $("#r-file").files[0], cur = $("#c-file").files[0];
+  if (!ref || !cur) { host.innerHTML = '<p class="error-msg">Please select both reference and current CSV files.</p>'; return; }
+  host.innerHTML = '<p class="muted">Detecting drift…</p>';
+  const fd = new FormData();
+  fd.append("reference", ref);
+  fd.append("current", cur);
+  const label = $("#d-label").value.trim();
+  if (label) fd.append("label", label);
+  fd.append("alpha", $("#d-alpha").value);
+  try {
+    const r = await fetch("/api/drift", { method: "POST", body: fd });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || ("HTTP " + r.status));
+    renderResult(host, data, { drift: true });
+  } catch (e) {
+    host.innerHTML = '<p class="error-msg">' + escapeHtml(e.message) + "</p>";
+  }
+});
+</script>
+</body>
+</html>
